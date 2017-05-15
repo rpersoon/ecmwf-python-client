@@ -40,7 +40,7 @@ except ImportError:
 
 
 ###############################################################################
-VERSION = '1.4.1'
+VERSION = '1.4.2'
 
 ###############################################################################
 
@@ -196,13 +196,25 @@ class Ignore303(HTTPRedirectHandler):
                     print("*** Please update your ~/.ecmwfapirc file")
                     print()
                     SAY = False
-            data = None
-            if req.has_data():
+
+            try:
+                # Python < 3.4
                 data = req.get_data()
+            except AttributeError:
+                # Python >= 3.4
+                data = req.data
+
+            try:
+                # Python < 3.4
+                origin_req_host = req.get_origin_req_host()
+            except AttributeError:
+                # Python >= 3.4
+                origin_req_host = req.origin_req_host
+
             return Request(newurl,
                            data=data,
                            headers=req.headers,
-                           origin_req_host=req.get_origin_req_host(),
+                           origin_req_host=origin_req_host,
                            unverifiable=True)
         return None
 
