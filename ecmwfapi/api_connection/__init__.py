@@ -1,4 +1,3 @@
-"""Python client for ECMWF web services API."""
 #
 # (C) Copyright 2012-2013 ECMWF.
 #
@@ -8,7 +7,4 @@
 # granted to it by virtue of its status as an intergovernmental organisation nor
 # does it submit to any jurisdiction.
 
-from .ECMWFDataServer import ECMWFDataServer
-from .exceptions import DataServerError
-
-__version__ = '1.4.2'
+from .api_connection import ApiConnection
