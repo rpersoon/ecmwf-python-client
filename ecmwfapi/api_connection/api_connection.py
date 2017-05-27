@@ -78,18 +78,20 @@ class ApiConnection(object):
         result = content
 
         if target:
-            size = -1
-            tries = 0
-            while size != result["size"] and tries < 10:
-                size = self._transfer(result["href"], target, result["size"])
-                if size != result["size"] and tries < 10:
-                    tries += 1
-                    self.log("Transfer interrupted, retrying...")
-                    time.sleep(60)
-                else:
-                    break
+            file = open(target, "wb")
 
-            assert size == result["size"]
+            time_start = time.time()
+
+            # Transfer the dataset using the robust file transfer
+            transfer_size = http.robust_get_file(result['href'], file)
+
+            time_end = time.time()
+
+            if time_end > time_start:
+                self.log("Transfer rate %s/s" % self._bytename(transfer_size / (time_end - time_start)))
+
+            file.flush()
+            file.close()
 
         # Try to delete the file at the API. Ignore exceptions as it does not have any impact.
         try:
