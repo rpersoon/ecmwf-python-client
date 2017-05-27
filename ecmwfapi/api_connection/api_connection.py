@@ -64,7 +64,6 @@ class ApiConnection(object):
                 status = content['status']
                 self.log("Request is %s" % status)
 
-            self.log("Sleeping %s second(s)" % self.retry)
             time.sleep(self.retry)
 
             content = self._api_request(self.location, 'GET')[1]
