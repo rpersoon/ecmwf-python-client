@@ -1,0 +1,2 @@
+class ApiConnectionError(Exception):
+    pass

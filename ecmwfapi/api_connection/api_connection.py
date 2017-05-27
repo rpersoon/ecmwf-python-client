@@ -7,68 +7,22 @@
 # granted to it by virtue of its status as an intergovernmental organisation nor
 # does it submit to any jurisdiction.
 
+from .exceptions import ApiConnectionError
+
 import json
 import time
 
-from urllib.error import HTTPError
-from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen, addinfourl
+from urllib.request import urlopen
 
-
-class APIException(Exception):
-
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
-class Ignore303(HTTPRedirectHandler):
-
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        if code in [301, 302]:
-            # We want the posts to work even if we are redirected
-            if code == 301:
-                print()
-                print("*** ECMWF API has moved to %s" % newurl)
-                print("*** Please update your ~/.ecmwfapirc file")
-                print()
-
-            try:
-                # Python < 3.4
-                data = req.get_data()
-            except AttributeError:
-                # Python >= 3.4
-                data = req.data
-
-            try:
-                # Python < 3.4
-                origin_req_host = req.get_origin_req_host()
-            except AttributeError:
-                # Python >= 3.4
-                origin_req_host = req.origin_req_host
-
-            return Request(newurl,
-                           data=data,
-                           headers=req.headers,
-                           origin_req_host=origin_req_host,
-                           unverifiable=True)
-        return None
-
-    @staticmethod
-    def http_error_303(req, fp, code, msg, headers):
-        infourl = addinfourl(fp, headers, req.get_full_url())
-        infourl.status = code
-        infourl.code = code
-        return infourl
+from ecmwfapi import http
 
 
 class ApiConnection(object):
 
-    def __init__(self, url, service, email, key, log, quiet=False, verbose=False, news=True):
-        self.url = url
-        self.email = email
-        self.key = key
+    def __init__(self, url, service, email, key, log, quiet=False, verbose=False, report_news=True):
+        self.api_url = url
+        self.api_email = email
+        self.api_key = key
         self.service = service
         self.log = log
         self.quiet = quiet
@@ -77,34 +31,130 @@ class ApiConnection(object):
         self.location = None
         self.done = False
         self.value = True
-        self.offset = 0
+        self.message_offset = 0
         self.status = None
 
-        self.log("ECMWF API at %s" % (self.url,))
-        user = self.call("%s/%s" % (self.url, "who-am-i"))
-        self.log("Welcome %s" % (user["full_name"] or "user '%s'" % user["uid"],))
-        if news:
-            try:
-                news = self.call("%s/%s/%s" % (self.url, self.service, "news"))
-                for n in news["news"].split("\n"):
-                    self.log(n)
-            except:
-                pass
+        self.log("Connecting to ECMWF API at %s" % self.api_url)
 
-    def _bytename(self, size):
-        prefix = {'': 'K', 'K': 'M', 'M': 'G', 'G': 'T', 'T': 'P', 'P': 'E'}
-        l = ''
-        size = size * 1.0
-        while 1024 < size:
-            l = prefix[l]
-            size = size / 1024
-        s = ""
-        if size > 1:
-            s = "s"
-        return "%g %sbyte%s" % (size, l, s)
+        # Retrieve user details
+        user = self._api_request('%s/who-am-i' % self.api_url)[1]
+        self.log("Registered as %s" % user['full_name'] or "user '%s'" % user['uid'])
+
+        # Display the news if requested and if available
+        if report_news:
+            news = self._api_request('%s/%s/news' % (self.api_url, self.service))[1]
+            for item in news['news'].split("\n"):
+                if len(item) > 0:
+                    self.log('News: ' + item)
+
+    def transfer_request(self, request, target=None):
+
+        status = None
+
+        content = self._api_request('%s/%s/requests' % (self.api_url, self.service), 'POST', request)[1]
+        self.log('Request submitted')
+        self.log('Request id: ' + content['name'])
+
+        if content['status'] != status:
+            status = content['status']
+            self.log("Request is %s" % status)
+
+        while not self.done:
+            if content['status'] != status:
+                status = content['status']
+                self.log("Request is %s" % status)
+
+            self.log("Sleeping %s second(s)" % self.retry)
+            time.sleep(self.retry)
+
+            content = self._api_request(self.location, 'GET')[1]
+            if content['status'] == 'complete':
+                self.done = True
+
+        if self.status != status:
+            status = self.status
+            self.log("Request is %s" % status)
+
+        result = content
+
+        if target:
+            size = -1
+            tries = 0
+            while size != result["size"] and tries < 10:
+                size = self._transfer(result["href"], target, result["size"])
+                if size != result["size"] and tries < 10:
+                    tries += 1
+                    self.log("Transfer interrupted, retrying...")
+                    time.sleep(60)
+                else:
+                    break
+
+            assert size == result["size"]
+
+        # Try to delete the file at the API. Ignore exceptions as it does not have any impact.
+        try:
+            self._api_request(self.location, 'DELETE')
+
+        except ApiConnectionError:
+            pass
+
+    def _api_request(self, url, request_type='GET', payload=None):
+
+        headers = {"Accept": "application/json", "From": self.api_email, "X-ECMWF-KEY": self.api_key}
+
+        # Construct API request URL
+        url = '%s/?offset=%d&limit=500' % (url, self.message_offset)
+
+        if request_type == 'GET':
+            [headers, content] = http.get_request(url, headers)
+
+        elif request_type == 'POST':
+
+            # Verify that a payload was given
+            if not payload:
+                raise ApiConnectionError("No payload given with POST request to %s" % url)
+
+            data = json.dumps(payload).encode('utf-8')
+            [headers, content] = http.post_request(url, data, headers)
+
+        elif request_type == 'DELETE':
+            [headers, content] = http.delete_request(url, headers)
+
+        else:
+            raise ApiConnectionError("Unknown API request type %s" % request_type)
+
+        # Decode the response
+        try:
+            content_raw = content.decode('utf-8')
+            content = json.loads(content_raw)
+
+        except (LookupError, ValueError, json.decoder.JSONDecodeError) as e:
+            raise ApiConnectionError("Failed to decode result: %s" % str(e))
+
+        # Check for any errors in the response
+        if 'error' in content:
+            raise ApiConnectionError("ECMWF API reported error: %s" % content['error'])
+
+        # Print any new messages reported by the API
+        if 'messages' in content:
+            for message in content['messages']:
+                print('API message: %s' % message)
+                self.message_offset += 1
+
+        # Update the retry period if specified
+        try:
+            self.retry = int(headers['retry-after'])
+
+        except KeyError:
+            pass
+
+        if headers.status in (201, 202):
+            self.location = headers['location']
+
+        return [headers, content]
 
     def _transfer(self, url, path, size):
-        self.log("Transfering %s into %s" % (self._bytename(size), path))
+        self.log("Transferring %s into %s" % (self._bytename(size), path))
         self.log("From %s" % (url, ))
 
         start = time.time()
@@ -135,157 +185,15 @@ class ApiConnection(object):
 
         return total
 
-    def request(self, request, target=None):
-
-        status = None
-
-        self.submit("%s/%s/requests" % (self.url, self.service), request)
-        self.log('Request submitted')
-        self.log('Request id: ' + self.last['name'])
-        if self.status != status:
-            status = self.status
-            self.log("Request is %s" % (status, ))
-
-        while not self.ready():
-            if self.status != status:
-                status = self.status
-                self.log("Request is %s" % (status, ))
-            self.wait()
-
-        if self.status != status:
-            status = self.status
-            self.log("Request is %s" % (status, ))
-
-        result = self.result()
-        if target:
-            size = -1
-            tries = 0
-            while size != result["size"] and tries < 10:
-                size = self._transfer(result["href"], target, result["size"])
-                if size != result["size"] and tries < 10:
-                    tries += 1
-                    self.log("Transfer interrupted, retrying...")
-                    time.sleep(60)
-                else:
-                    break
-
-            assert size == result["size"]
-
-        self.cleanup()
-
-        return result
-
-    def call(self, url, payload=None, method="GET"):
-
-        if self.verbose:
-            print(method, url)
-
-        headers = {"Accept": "application/json", "From": self.email, "X-ECMWF-KEY": self.key}
-
-        opener = build_opener(Ignore303)
-
-        data = None
-        if payload is not None:
-            data = json.dumps(payload).encode('utf-8')
-            headers["Content-Type"] = "application/json"
-
-        url = "%s?offset=%d&limit=500" % (url, self.offset)
-        req = Request(url=url, data=data, headers=headers)
-        if method:
-            req.get_method = lambda: method
-
-        error = False
-
-        try:
-            res = opener.open(req)
-        except HTTPError as e:
-            # It seems that some version of urllib2 are buggy
-            if e.code <= 299:
-                res = e
-            else:
-                raise
-
-        self.retry = int(res.headers.get("Retry-After", self.retry))
-        code = res.code
-        if code in [201, 202]:
-            self.location = res.headers.get("Location", self.location)
-
-        if self.verbose:
-            print("Code", code)
-            print("Content-Type", res.headers.get("Content-Type"))
-            print("Content-Length", res.headers.get("Content-Length"))
-            print("Location", res.headers.get("Location"))
-
-        body = res.read().decode("utf-8")
-        res.close()
-
-        if code in [204]:
-            self.last = None
-            return None
-        else:
-            try:
-                self.last = json.loads(body)
-            except Exception as e:
-                self.last = {"error": "%s: %s" % (e, body)}
-                error = True
-
-        if self.verbose:
-            print(json.dumps(self.last, indent=4))
-
-        self.status = self.last.get("status", self.status)
-
-        if self.verbose:
-            print("Status", self.status)
-
-        if "messages" in self.last:
-            for n in self.last["messages"]:
-                if not self.quiet:
-                    print(n)
-                self.offset += 1
-
-        if code == 200 and self.status == "complete":
-            self.value = self.last
-            self.done = True
-            if isinstance(self.value, dict) and "result" in self.value:
-                self.value = self.value["result"]
-
-        if code in [303]:
-            self.value = self.last
-            self.done = True
-
-        if "error" in self.last:
-            raise APIException("ecmwf.API error 1: %s" % (self.last["error"],))
-
-        if error:
-            raise APIException("ecmwf.API error 2: %s" % (res, ))
-
-        return self.last
-
-    def submit(self, url, payload):
-        self.call(url, payload, "POST")
-
-    def POST(self, url, payload):
-        return self.call(url, payload, "POST")
-
-    def GET(self, url):
-        return self.call(url, None, "GET")
-
-    def wait(self):
-        if self.verbose:
-            print("Sleeping %s second(s)" % (self.retry))
-        time.sleep(self.retry)
-        self.call(self.location, None, "GET")
-
-    def ready(self):
-        return self.done
-
-    def result(self):
-        return self.value
-
-    def cleanup(self):
-        try:
-            if self.location:
-                self.call(self.location, None, "DELETE")
-
-        except:
-            pass
+    @staticmethod
+    def _bytename(size):
+        prefix = {'': 'K', 'K': 'M', 'M': 'G', 'G': 'T', 'T': 'P', 'P': 'E'}
+        l = ''
+        size *= 1.0
+        while 1024 < size:
+            l = prefix[l]
+            size /= 1024
+        s = ""
+        if size > 1:
+            s = "s"
+        return "%g %sbyte%s" % (size, l, s)

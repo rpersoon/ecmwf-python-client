@@ -8,3 +8,4 @@
 # does it submit to any jurisdiction.
 
 from .api_connection import ApiConnection
+from .exceptions import ApiConnectionError

@@ -36,13 +36,12 @@ class ECMWFDataServer:
         if self.log:
             self.log(m)
         else:
-            t = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-            print("%s %s" % (t, m,))
+            print("%s %s" % (time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), m))
 
     def retrieve(self, request_data):
         connection = ApiConnection(self.url, "datasets/%s" % request_data['dataset'], self.email, self.key,
                                    self.trace, verbose=self.verbose)
-        connection.request(request_data, request_data['target'])
+        connection.transfer_request(request_data, request_data['target'])
         self.trace("Done.")
 
     def _get_api_key_values(self):
