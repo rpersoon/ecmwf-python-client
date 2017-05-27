@@ -7,7 +7,6 @@
 # In applying this licence, ECMWF does not waive the privileges and immunities 
 # granted to it by virtue of its status as an intergovernmental organisation nor
 # does it submit to any jurisdiction.
-#
 
 from ecmwfapi import ECMWFDataServer
 
@@ -15,17 +14,18 @@ from ecmwfapi import ECMWFDataServer
 # available from https://api.ecmwf.int/v1/key/
 
 server = ECMWFDataServer()
+
 server.retrieve({
-    'dataset' : "tigge",
-    'step'    : "24",
-    'number'  : "all",
-    'levtype' : "sl",
-    'date'    : "20071001",
-    'time'    : "00",
-    'origin'  : "all",
-    'type'    : "pf",
-    'param'   : "tp",
-    'area'    : "70/-130/30/-60",
-    'grid'    : "2/2",
-    'target'  : "data.grib"
+    "class": "s2",
+    "dataset": "s2s",
+    "date": "2015-01-01",
+    "expver": "prod",
+    "levtype": "sfc",
+    "origin": "ecmf",
+    "param": "165",
+    "step": "0/to/1104/by/24",
+    "stream": "enfo",
+    "target": "test",
+    "time": "00",
+    "type": "cf",
 })
