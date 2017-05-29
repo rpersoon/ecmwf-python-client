@@ -91,6 +91,22 @@ def robust_get_file(url, file_handle, block_size=1048576, timeout=15):
     :return: None
     """
 
+    # Verify block size parameter
+    if not isinstance(block_size, int):
+        raise HttpError("The block size should be an integer")
+    elif block_size < 512:
+        raise HttpError("The block size should be at least 512 bytes")
+    elif block_size > 268435456:
+        raise HttpError("The block size can not be more than 256 megabytes")
+
+    # Verify timeout parameter
+    if not isinstance(timeout, int):
+        raise HttpError("The timeout should be an integer")
+    elif timeout < 1:
+        raise HttpError("The timeout should be at least 1 second")
+    elif timeout > 86400:
+        raise HttpError("The timeout can not be more than 86400 seconds")
+
     # Retrieve header first in order to determine file size
     try:
         h = httplib2.Http(timeout=timeout)
