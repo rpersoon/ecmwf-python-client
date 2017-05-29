@@ -66,13 +66,33 @@ class ECMWFDataServer:
         :param request_data: parameter list
         """
 
-        try:
-            connection = ApiConnection(self.url, "datasets/%s" % request_data['dataset'], self.email, self.key,
-                                       self.log, verbose=self.verbose)
-            connection.transfer_request(request_data, request_data['target'])
+        if isinstance(request_data, dict):
+            request_data = [request_data]
 
-        except ApiConnectionError as e:
-            self.log("API connection error: %s" % e, 'info')
+        elif not isinstance(request_data, list):
+            self.log("The request data object should be a dictionary with the parameters or a list with multiple"
+                     "dictionaries for multiple transfers", 'error')
+            return
+
+        if len(request_data) == 0:
+            self.log("No requests were given", 'warning')
+            return
+
+        for [index, request] in enumerate(request_data):
+
+            if len(request_data) == 1:
+                self.log("Starting request", 'info')
+
+            else:
+                self.log("Starting request %i of %i" % (index + 1, len(request_data)), 'info')
+
+            try:
+                connection = ApiConnection(self.url, "datasets/%s" % request['dataset'], self.email, self.key,
+                                           self.log, verbose=self.verbose)
+                connection.transfer_request(request, request['target'])
+
+            except ApiConnectionError as e:
+                self.log("API connection error: %s" % e, 'error')
 
         self.log("ECMWFDataServer done", 'info')
 
