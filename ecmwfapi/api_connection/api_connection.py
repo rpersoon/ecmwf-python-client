@@ -35,35 +35,35 @@ class ApiConnection(object):
         self.message_offset = 0
         self.status = None
 
-        self.log("Connecting to ECMWF API at %s" % self.api_url)
+        self.log("Connecting to ECMWF API at %s" % self.api_url, 'info')
 
         # Retrieve user details
         user = self._api_request('%s/who-am-i' % self.api_url)[1]
-        self.log("Registered as %s" % user['full_name'] or "user '%s'" % user['uid'])
+        self.log("Registered as %s" % user['full_name'] or "user '%s'" % user['uid'], 'info')
 
         # Display the news if requested and if available
         if report_news:
             news = self._api_request('%s/%s/news' % (self.api_url, self.service))[1]
             for item in news['news'].split("\n"):
                 if len(item) > 0:
-                    self.log('News: ' + item)
+                    self.log("News: %s" % item, 'info')
 
     def transfer_request(self, request, target=None):
 
         status = None
 
         content = self._api_request('%s/%s/requests' % (self.api_url, self.service), 'POST', request)[1]
-        self.log('Request submitted')
-        self.log('Request id: ' + content['name'])
+        self.log("Request submitted", 'info')
+        self.log("Request id: %s" % content['name'], 'info')
 
         if content['status'] != status:
             status = content['status']
-            self.log("Request is %s" % status)
+            self.log("Request is %s" % status, 'info')
 
         while not self.done:
             if content['status'] != status:
                 status = content['status']
-                self.log("Request is %s" % status)
+                self.log("Request is %s" % status, 'info')
 
             time.sleep(self.retry)
 
@@ -73,7 +73,7 @@ class ApiConnection(object):
 
         if self.status != status:
             status = self.status
-            self.log("Request is %s" % status)
+            self.log("Request is %s" % status, 'info')
 
         result = content
 
@@ -91,7 +91,7 @@ class ApiConnection(object):
             time_end = time.time()
 
             if time_end > time_start:
-                self.log("Transfer rate %s/s" % self._bytename(transfer_size / (time_end - time_start)))
+                self.log("Transfer rate %s/s" % self._bytename(transfer_size / (time_end - time_start)), 'info')
 
             file.flush()
             file.close()
@@ -138,12 +138,12 @@ class ApiConnection(object):
 
         # Check for any errors in the response
         if 'error' in content:
-            raise ApiConnectionError("ECMWF API reported error: %s" % content['error'])
+            raise ApiConnectionError("API reported error: %s" % content['error'])
 
         # Print any new messages reported by the API
         if 'messages' in content:
             for message in content['messages']:
-                print('API message: %s' % message)
+                self.log("API message: %s" % message, 'info')
                 self.message_offset += 1
 
         # Update the retry period if specified
