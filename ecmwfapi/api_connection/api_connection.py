@@ -158,38 +158,6 @@ class ApiConnection(object):
 
         return [headers, content]
 
-    def _transfer(self, url, path, size):
-        self.log("Transferring %s into %s" % (self._bytename(size), path))
-        self.log("From %s" % (url, ))
-
-        start = time.time()
-
-        http = urlopen(url)
-        f = open(path, "wb")
-
-        total = 0
-        block = 1024 * 1024
-        while True:
-            chunk = http.read(block)
-            if not chunk:
-                break
-            f.write(chunk)
-            total += len(chunk)
-
-        f.flush()
-        f.close()
-
-        end = time.time()
-
-        header = http.info()
-        length = header.get("Content-Length")
-        if length is None:
-            self.log("Warning: Content-Length missing from HTTP header")
-        if end > start:
-            self.log("Transfer rate %s/s" % self._bytename(total / (end - start)), )
-
-        return total
-
     @staticmethod
     def _bytename(size):
         prefix = {'': 'K', 'K': 'M', 'M': 'G', 'G': 'T', 'T': 'P', 'P': 'E'}
