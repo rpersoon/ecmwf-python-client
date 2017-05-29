@@ -10,6 +10,7 @@
 from .exceptions import ApiConnectionError
 
 import json
+import sys
 import time
 
 from urllib.request import urlopen
@@ -77,7 +78,10 @@ class ApiConnection(object):
         result = content
 
         if target:
-            file = open(target, "wb")
+            if target:
+                file = open(target, "wb")
+            else:
+                file = sys.stdout
 
             time_start = time.time()
 
