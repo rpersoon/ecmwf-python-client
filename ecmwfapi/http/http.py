@@ -85,7 +85,7 @@ def robust_get_file(url, file_handle, block_size=1048576, timeout=15):
     Download an object in a robust way using HTTP partial downloading
 
     :param url: URL to download
-    :param file: open pointer to file to store download in, data is appended
+    :param file_handle: open pointer to file to store download in, data is appended
     :param block_size: size of individual download chunks during partial downloading
     :param timeout: timeout in seconds till individual block downloads are failed
     :return: None

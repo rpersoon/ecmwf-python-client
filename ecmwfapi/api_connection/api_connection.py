@@ -18,13 +18,22 @@ from ecmwfapi import http
 
 class ApiConnection(object):
 
-    def __init__(self, url, service, email, key, log, quiet=False, report_news=True):
-        self.api_url = url
-        self.api_email = email
-        self.api_key = key
-        self.service = service
+    def __init__(self, api_url, api_service, api_email, api_key, log, report_news=True):
+        """
+        :param api_url: ECMWF API url
+        :param api_service: the service that is called at the API
+        :param api_email: e-mail address used to register for the API
+        :param api_key: authentication API key
+        :param log: the logging method used. Should accept 2 parameters: the message itself and the logging level, which
+            can be one of [info, warning, error]
+        :param report_news: whether to output news messages from the API
+        """
+
+        self.api_url = api_url
+        self.api_email = api_email
+        self.api_key = api_key
+        self.api_service = api_service
         self.log = log
-        self.quiet = quiet
         self.retry = 5
         self.location = None
         self.done = False
@@ -40,16 +49,22 @@ class ApiConnection(object):
 
         # Display the news if requested and if available
         if report_news:
-            news = self._api_request('%s/%s/news' % (self.api_url, self.service))[1]
+            news = self._api_request('%s/%s/news' % (self.api_url, self.api_service))[1]
             for item in news['news'].split("\n"):
                 if len(item) > 0:
                     self.log("News: %s" % item, 'info')
 
     def transfer_request(self, request, target=None):
+        """
+        Transfer a dataset
+
+        :param request: dictionary with request data
+        :param target: location to write data to. Outputs to stdout if target == None
+        """
 
         status = None
 
-        content = self._api_request('%s/%s/requests' % (self.api_url, self.service), 'POST', request)[1]
+        content = self._api_request('%s/%s/requests' % (self.api_url, self.api_service), 'POST', request)[1]
         self.log("Request submitted", 'info')
         self.log("Request id: %s" % content['name'], 'info')
 
@@ -101,11 +116,23 @@ class ApiConnection(object):
             pass
 
     def _api_request(self, url, request_type='GET', payload=None):
+        """
+        Make a request at the ECMWF API
 
-        headers = {"Accept": "application/json", "From": self.api_email, "X-ECMWF-KEY": self.api_key}
+        :param url: URL to call
+        :param request_type: request type, one of [GET, POST, DELETE]
+        :param payload: request payload (only applicable to POST requests)
+        :return: tuple with response headers and content
+        """
+
+        headers = {
+            'Accept': "application/json",
+            'From': self.api_email,
+            'X-ECMWF-KEY': self.api_key
+        }
 
         # Construct API request URL
-        url = '%s/?offset=%d&limit=500' % (url, self.message_offset)
+        url = "%s/?offset=%d&limit=500" % (url, self.message_offset)
 
         if request_type == 'GET':
             [headers, content] = http.get_request(url, headers)
@@ -157,13 +184,21 @@ class ApiConnection(object):
 
     @staticmethod
     def _bytename(size):
+        """
+        Convert bytes to printable value
+
+        :param size: size in bytes
+        :return: printable value corresponding to given bytes
+        """
+
         prefix = {'': 'K', 'K': 'M', 'M': 'G', 'G': 'T', 'T': 'P', 'P': 'E'}
         l = ''
         size *= 1.0
+
         while 1024 < size:
             l = prefix[l]
             size /= 1024
-        s = ""
+        s = ''
         if size > 1:
-            s = "s"
+            s = 's'
         return "%g %sbyte%s" % (size, l, s)
