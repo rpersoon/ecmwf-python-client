@@ -18,14 +18,13 @@ from ecmwfapi import http
 
 class ApiConnection(object):
 
-    def __init__(self, url, service, email, key, log, quiet=False, verbose=False, report_news=True):
+    def __init__(self, url, service, email, key, log, quiet=False, report_news=True):
         self.api_url = url
         self.api_email = email
         self.api_key = key
         self.service = service
         self.log = log
         self.quiet = quiet
-        self.verbose = verbose
         self.retry = 5
         self.location = None
         self.done = False

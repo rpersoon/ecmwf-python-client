@@ -7,42 +7,68 @@
 # granted to it by virtue of its status as an intergovernmental organisation nor
 # does it submit to any jurisdiction.
 
-from .exceptions import APIKeyFetchError
+from .exceptions import *
 
 import json
 import os
 
 from .api_connection import *
+from .config import *
 from .log import *
-
-
-__version__ = '1.4.2'
 
 
 class ECMWFDataServer:
 
     def __init__(self, url=None, key=None, email=None, verbose=False, custom_log=None, custom_log_level=False):
 
+        # Load the configuration file
+        try:
+            config.load(os.path.join(os.path.dirname(__file__), 'config.ini'))
+
+        except ConfigError as e:
+            raise DataServerError("Failed to load configuration file config.ini: %s" % e)
+
+        # Initialise the logging
+        if custom_log is None:
+            self.log_level = True
+
+            display_info_messages = config.get_boolean('display_info_messages', 'log')
+            display_warning_messages = config.get_boolean('display_warning_messages', 'log')
+            display_error_messages = config.get_boolean('display_error_messages', 'log')
+
+            self.log_method = Log(display_info_messages, display_warning_messages, display_error_messages).log
+
+        else:
+            self.log_level = custom_log_level
+            self.log_method = custom_log
+
+        # If API credentials are not passed, try to retrieve the API credentials from the configuration file first
         if url is None or key is None or email is None:
+
+            try:
+                url = config.get('url', 'api')
+                key = config.get('key', 'api')
+                email = config.get('email', 'api')
+
+            except ConfigError:
+                pass
+
+        # If API credentials where not in the configuration file either, retreive them from the ~/.ecmwfapirc file or
+        # environment
+        if url is None or key is None or email is None or url == 'none' or key == 'none' or email == 'none':
+
             try:
                 [key, url, email] = self._get_api_key_values()
 
             except APIKeyFetchError as e:
                 self.log("Failed to retrieve ECMWF API key: %s" % e, 'error')
+                raise DataServerError("Failed to retrieve ECMWF API key from all sources: %s" % e)
 
         self.url = url
         self.key = key
         self.email = email
-        self.verbose = verbose
 
-        if custom_log is None:
-            self.log_level = True
-            self.log_method = Log().log
-        else:
-            self.log_level = custom_log_level
-            self.log_method = custom_log
-
-        self.log("ECMWF API python library %s initialised" % __version__, 'info')
+        self.log("ECMWF API python library %s initialised" % config.get('version', 'client'), 'info')
 
     def log(self, message, level):
         """
@@ -88,7 +114,7 @@ class ECMWFDataServer:
 
             try:
                 connection = ApiConnection(self.url, "datasets/%s" % request['dataset'], self.email, self.key,
-                                           self.log, verbose=self.verbose)
+                                           self.log)
                 connection.transfer_request(request, request['target'])
 
             except ApiConnectionError as e:
