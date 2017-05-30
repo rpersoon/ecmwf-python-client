@@ -13,8 +13,6 @@ import json
 import sys
 import time
 
-from urllib.request import urlopen
-
 from ecmwfapi import http
 
 
