@@ -80,7 +80,7 @@ def delete_request(url, headers=None, timeout=30):
     return [resp, content]
 
 
-def robust_get_file(url, file_handle, block_size=1048576, timeout=15):
+def robust_get_file(url, file_handle, block_size=1048576, timeout=20):
     """
     Download an object in a robust way using HTTP partial downloading
 
@@ -135,13 +135,14 @@ def robust_get_file(url, file_handle, block_size=1048576, timeout=15):
         completed = False
         try_count = 0
 
-        while not completed and try_count < 5:
+        while not completed and try_count < 7:
 
             try:
                 resp, content = h.request(url, 'GET', '', headers)
                 completed = True
 
             except Exception:
+                print("Failed a block, retrying")
                 try_count += 1
 
         file_handle.write(content)
@@ -152,5 +153,7 @@ def robust_get_file(url, file_handle, block_size=1048576, timeout=15):
 
         if block_end >= content_length:
             block_end = content_length - 1
+
+        print("Completed downloading a block")
 
     return content_length
