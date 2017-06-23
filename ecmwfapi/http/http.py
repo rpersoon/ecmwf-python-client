@@ -4,18 +4,19 @@ import httplib2
 import socket
 
 
-def get_request(url, headers=None, timeout=30):
+def get_request(url, headers=None, timeout=30, disable_ssl_validation=False):
     """
     Retrieve contents of a page, passing any exceptions. Does not follow redirects.
 
     :param url: URL to retrieve
     :param headers: request headers
     :param timeout: timeout of request in seconds
+    :param disable_ssl_validation: whether to disable SSL validation in httplib2
     :return: page data
     """
 
     try:
-        h = httplib2.Http(timeout=timeout)
+        h = httplib2.Http(timeout=timeout, disable_ssl_certificate_validation=disable_ssl_validation)
         h.follow_redirects = False
         resp, content = h.request(url, 'GET', '', headers=headers)
 
@@ -27,7 +28,7 @@ def get_request(url, headers=None, timeout=30):
     return [resp, content]
 
 
-def post_request(url, data, headers=None, timeout=30):
+def post_request(url, data, headers=None, timeout=30, disable_ssl_validation=False):
     """
     Retrieve contents of a page with a POST request and one payload data object, passing any exceptions.  Does not
     follow redirects.
@@ -36,6 +37,7 @@ def post_request(url, data, headers=None, timeout=30):
     :param data: Payload data object
     :param headers: request headers
     :param timeout: timeout of request in seconds
+    :param disable_ssl_validation: whether to disable SSL validation in httplib2
     :return: page data
     """
 
@@ -45,7 +47,7 @@ def post_request(url, data, headers=None, timeout=30):
     headers['Content-type'] = 'application/x-www-form-urlencoded'
 
     try:
-        h = httplib2.Http(timeout=timeout)
+        h = httplib2.Http(timeout=timeout, disable_ssl_certificate_validation=disable_ssl_validation)
         h.follow_redirects = False
         resp, content = h.request(url, 'POST', data, headers=headers)
 
@@ -57,18 +59,19 @@ def post_request(url, data, headers=None, timeout=30):
     return [resp, content]
 
 
-def delete_request(url, headers=None, timeout=30):
+def delete_request(url, headers=None, timeout=30, disable_ssl_validation=False):
     """
     Retrieve contents of a page, passing any exceptions. Does not follow redirects.
 
     :param url: URL to retrieve
     :param headers: request headers
     :param timeout: timeout of request in seconds
+    :param disable_ssl_validation: whether to disable SSL validation in httplib2
     :return: page data
     """
 
     try:
-        h = httplib2.Http(timeout=timeout)
+        h = httplib2.Http(timeout=timeout, disable_ssl_certificate_validation=disable_ssl_validation)
         h.follow_redirects = False
         resp, content = h.request(url, 'DELETE', '', headers=headers)
 
@@ -80,7 +83,7 @@ def delete_request(url, headers=None, timeout=30):
     return [resp, content]
 
 
-def robust_get_file(url, file_handle, block_size=1048576, timeout=20):
+def robust_get_file(url, file_handle, block_size=1048576, timeout=20, disable_ssl_validation=False):
     """
     Download an object in a robust way using HTTP partial downloading
 
@@ -88,6 +91,7 @@ def robust_get_file(url, file_handle, block_size=1048576, timeout=20):
     :param file_handle: open pointer to file to store download in, data is appended
     :param block_size: size of individual download chunks during partial downloading
     :param timeout: timeout in seconds till individual block downloads are failed
+    :param disable_ssl_validation: whether to disable SSL validation in httplib2
     :return: None
     """
 
@@ -109,7 +113,7 @@ def robust_get_file(url, file_handle, block_size=1048576, timeout=20):
 
     # Retrieve header first in order to determine file size
     try:
-        h = httplib2.Http(timeout=timeout)
+        h = httplib2.Http(timeout=timeout, disable_ssl_certificate_validation=disable_ssl_validation)
         resp, content = h.request(url, 'HEAD', '', headers={})
 
     except httplib2.ServerNotFoundError as e:

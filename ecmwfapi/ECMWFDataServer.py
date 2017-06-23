@@ -115,6 +115,12 @@ class ECMWFDataServer:
             self.log("No requests were given", 'warning')
             return
 
+        try:
+            disable_ssl_validation = config.get_boolean('disable_ssl_validation', 'network')
+
+        except ConfigError:
+            disable_ssl_validation = False
+
         for [index, request] in enumerate(request_data):
 
             if len(request_data) == 1:
@@ -125,7 +131,7 @@ class ECMWFDataServer:
 
             try:
                 connection = ApiConnection(self.api_url, "datasets/%s" % request['dataset'], self.api_email,
-                                           self.api_key, self.log)
+                                           self.api_key, self.log, disable_ssl_validation=disable_ssl_validation)
                 connection.transfer_request(request, request['target'])
 
             except ApiConnectionError as e:

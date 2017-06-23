@@ -18,7 +18,7 @@ from ecmwfapi import http
 
 class ApiConnection(object):
 
-    def __init__(self, api_url, api_service, api_email, api_key, log, report_news=True):
+    def __init__(self, api_url, api_service, api_email, api_key, log, report_news=True, disable_ssl_validation=False):
         """
         :param api_url: ECMWF API url
         :param api_service: the service that is called at the API
@@ -40,6 +40,7 @@ class ApiConnection(object):
         self.value = True
         self.message_offset = 0
         self.status = None
+        self.disable_ssl_validation = disable_ssl_validation
 
         self.log("Connecting to ECMWF API at %s" % self.api_url, 'info')
 
@@ -98,7 +99,8 @@ class ApiConnection(object):
             time_start = time.time()
 
             # Transfer the dataset using the robust file transfer
-            transfer_size = http.robust_get_file(result['href'], file)
+            transfer_size = http.robust_get_file(result['href'], file,
+                                                 disable_ssl_validation=self.disable_ssl_validation)
 
             time_end = time.time()
 
@@ -135,7 +137,7 @@ class ApiConnection(object):
         url = "%s/?offset=%d&limit=500" % (url, self.message_offset)
 
         if request_type == 'GET':
-            [headers, content] = http.get_request(url, headers)
+            [headers, content] = http.get_request(url, headers, disable_ssl_validation=self.disable_ssl_validation)
 
         elif request_type == 'POST':
 
@@ -144,10 +146,11 @@ class ApiConnection(object):
                 raise ApiConnectionError("No payload given with POST request to %s" % url)
 
             data = json.dumps(payload).encode('utf-8')
-            [headers, content] = http.post_request(url, data, headers)
+            [headers, content] = http.post_request(url, data, headers,
+                                                   disable_ssl_validation=self.disable_ssl_validation)
 
         elif request_type == 'DELETE':
-            [headers, content] = http.delete_request(url, headers)
+            [headers, content] = http.delete_request(url, headers, disable_ssl_validation=self.disable_ssl_validation)
 
         else:
             raise ApiConnectionError("Unknown API request type %s" % request_type)
