@@ -9,6 +9,7 @@
 # does it submit to any jurisdiction.
 
 from .ECMWFDataServer import ECMWFDataServer
+from .ECMWFExtendedDataServer import ECMWFExtendedDataServer
 from .exceptions import DataServerError
 
 __version__ = '1.4.2'
