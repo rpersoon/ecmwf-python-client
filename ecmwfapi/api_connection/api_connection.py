@@ -18,7 +18,8 @@ from ecmwfapi import http
 
 class ApiConnection(object):
 
-    def __init__(self, api_url, api_service, api_email, api_key, log, report_news=True, disable_ssl_validation=False):
+    def __init__(self, api_url, api_service, api_email, api_key, log, report_news=True, disable_ssl_validation=False,
+                 request_id=None):
         """
         :param api_url: ECMWF API url
         :param api_service: the service that is called at the API
@@ -41,19 +42,20 @@ class ApiConnection(object):
         self.message_offset = 0
         self.status = None
         self.disable_ssl_validation = disable_ssl_validation
+        self.request_id = request_id
 
-        self.log("Connecting to ECMWF API at %s" % self.api_url, 'info')
+        self.log("Connecting to ECMWF API at %s" % self.api_url, 'info', self.request_id)
 
         # Retrieve user details
         user = self._api_request('%s/who-am-i' % self.api_url)[1]
-        self.log("Registered as %s" % user['full_name'] or "user '%s'" % user['uid'], 'info')
+        self.log("Registered as %s" % user['full_name'] or "user '%s'" % user['uid'], 'info', self.request_id)
 
         # Display the news if requested and if available
         if report_news:
             news = self._api_request('%s/%s/news' % (self.api_url, self.api_service))[1]
             for item in news['news'].split("\n"):
                 if len(item) > 0:
-                    self.log("News: %s" % item, 'info')
+                    self.log("News: %s" % item, 'info', self.request_id)
 
     def transfer_request(self, request, target=None):
         """
@@ -66,17 +68,17 @@ class ApiConnection(object):
         status = None
 
         content = self._api_request('%s/%s/requests' % (self.api_url, self.api_service), 'POST', request)[1]
-        self.log("Request submitted", 'info')
-        self.log("Request id: %s" % content['name'], 'info')
+        self.log("Request submitted", 'info', self.request_id)
+        self.log("Request id: %s" % content['name'], 'info', self.request_id)
 
         if content['status'] != status:
             status = content['status']
-            self.log("Request is %s" % status, 'info')
+            self.log("Request is %s" % status, 'info', self.request_id)
 
         while not self.done:
             if content['status'] != status:
                 status = content['status']
-                self.log("Request is %s" % status, 'info')
+                self.log("Request is %s" % status, 'info', self.request_id)
 
             time.sleep(self.retry)
 
@@ -86,7 +88,7 @@ class ApiConnection(object):
 
         if self.status != status:
             status = self.status
-            self.log("Request is %s" % status, 'info')
+            self.log("Request is %s" % status, 'info', self.request_id)
 
         result = content
 
@@ -105,7 +107,8 @@ class ApiConnection(object):
             time_end = time.time()
 
             if time_end > time_start:
-                self.log("Transfer rate %s/s" % self._bytename(transfer_size / (time_end - time_start)), 'info')
+                self.log("Transfer rate %s/s" % self._bytename(transfer_size / (time_end - time_start)), 'info',
+                         self.request_id)
 
             file.flush()
             file.close()
@@ -170,7 +173,7 @@ class ApiConnection(object):
         # Print any new messages reported by the API
         if 'messages' in content:
             for message in content['messages']:
-                self.log("API message: %s" % message, 'info')
+                self.log("API message: %s" % message, 'info', self.request_id)
                 self.message_offset += 1
 
         # Update the retry period if specified

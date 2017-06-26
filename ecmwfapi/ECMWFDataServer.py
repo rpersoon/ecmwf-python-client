@@ -81,7 +81,7 @@ class ECMWFDataServer:
 
         self.log("ECMWF API python library %s initialised" % config.get('version', 'client'), 'info')
 
-    def log(self, message, level):
+    def log(self, message, level, request_id=None):
         """
         Passed to the transfer classes to provide logging, uses available logging method to log messages. This method is
         required for backwards compatibility and to support different custom logging functions, either with one (message
@@ -89,7 +89,12 @@ class ECMWFDataServer:
 
         :param message: message to log
         :param level: log level, in [info, warning, error] for the default logging module
+        :param request_id: optional request id to add to log messages
         """
+
+        # Add the request id to the message if it is specified
+        if isinstance(request_id, int):
+            message = '(Request %s) %s' % (request_id, message)
 
         if self.log_level:
             self.log_method(message, level)
