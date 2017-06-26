@@ -158,6 +158,4 @@ def robust_get_file(url, file_handle, block_size=1048576, timeout=20, disable_ss
         if block_end >= content_length:
             block_end = content_length - 1
 
-        print("Completed downloading a block")
-
     return content_length
