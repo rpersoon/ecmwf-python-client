@@ -1,7 +1,10 @@
 from .exceptions import *
 
+import concurrent.futures
 import httplib2
+import queue
 import socket
+import time
 
 
 def get_request(url, headers=None, timeout=30, disable_ssl_validation=False):
@@ -111,16 +114,34 @@ def robust_get_file(url, file_handle, block_size=1048576, timeout=20, disable_ss
     elif timeout > 86400:
         raise HttpError("The timeout can not be more than 86400 seconds")
 
+    # Define HTTP handler
+    http_handle = httplib2.Http(timeout=timeout, disable_ssl_certificate_validation=disable_ssl_validation)
+
     # Retrieve header first in order to determine file size
-    try:
-        h = httplib2.Http(timeout=timeout, disable_ssl_certificate_validation=disable_ssl_validation)
-        resp, content = h.request(url, 'HEAD', '', headers={})
+    connected = False
+    connection_retries = 0
+    headers = None
 
-    except httplib2.ServerNotFoundError as e:
-        raise HttpError("Could not retrieve URL %s. Additional info: %s" % (str(url), str(e)))
+    while not connected:
+        if connection_retries > 0:
+            print("Failed to retrieve header information, retry %s of 5" % connection_retries)
+
+        try:
+            headers, _ = http_handle.request(url, 'HEAD', '', headers={})
+            connected = True
+
+        except httplib2.ServerNotFoundError as e:
+            connection_retries += 1
+            if connection_retries > 5:
+                raise HttpError("The IP address of %s could not be determined. Additional info: %s" % (url, e))
+
+        except socket.timeout:
+            connection_retries += 1
+            if connection_retries > 5:
+                raise HttpError("The connection with %s timed out while retrieving header information" % url)
 
     try:
-        content_length = int(resp['content-length'])
+        content_length = int(headers['content-length'])
 
     except KeyError:
         raise HttpError("Content length not set")
@@ -132,30 +153,174 @@ def robust_get_file(url, file_handle, block_size=1048576, timeout=20, disable_ss
         block_end = content_length - 1
 
     while content_length > block_start and block_end != block_start:
-        headers = {
-            'Range': 'bytes=%s-%s' % (block_start, block_end)
-        }
 
-        completed = False
-        try_count = 0
-
-        while not completed and try_count < 7:
-
-            try:
-                resp, content = h.request(url, 'GET', '', headers)
-                completed = True
-
-            except Exception:
-                print("Failed a block, retrying")
-                try_count += 1
-
-        file_handle.write(content)
-
-        block_end_old = block_end
+        file_handle.write(_get_block(http_handle, url, block_start, block_end))
         block_start = block_end + 1
-        block_end = block_end_old + block_size
+        block_end += block_size
 
         if block_end >= content_length:
             block_end = content_length - 1
 
     return content_length
+
+
+def robust_get_file_parallel(url, file_handle, block_size=1048576, timeout=20, disable_ssl_validation=False, threads=5):
+    """
+    Download an object in a robust way using HTTP partial downloading, and process multiple blocks in parallel
+
+    :param url: URL to download
+    :param file_handle: open pointer to file to store download in, data is appended
+    :param block_size: size of individual download chunks during partial downloading
+    :param timeout: timeout in seconds till individual block downloads are failed
+    :param disable_ssl_validation: whether to disable SSL validation in httplib2
+    :param threads: number of threads to download blocks
+    :return: None
+    """
+
+    # Verify block size parameter
+    if not isinstance(block_size, int):
+        raise HttpError("The block size should be an integer")
+    elif block_size < 512:
+        raise HttpError("The block size should be at least 512 bytes")
+    elif block_size > 268435456:
+        raise HttpError("The block size can not be more than 256 megabytes")
+
+    # Verify timeout parameter
+    if not isinstance(timeout, int):
+        raise HttpError("The timeout should be an integer")
+    elif timeout < 1:
+        raise HttpError("The timeout should be at least 1 second")
+    elif timeout > 86400:
+        raise HttpError("The timeout can not be more than 86400 seconds")
+
+    # Define block result storage
+    result_blocks = {}
+
+    # Define work queue
+    work_queue = queue.Queue()
+
+    # Launch worker threads
+    thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=threads)
+    for i in range(threads):
+        thread_pool.submit(_thread_download, work_queue, result_blocks, url, timeout, disable_ssl_validation)
+
+    # Define HTTP handler
+    http_handle = httplib2.Http(timeout=timeout, disable_ssl_certificate_validation=disable_ssl_validation)
+
+    # Retrieve header first in order to determine file size
+    connected = False
+    connection_retries = 0
+    headers = None
+
+    while not connected:
+        if connection_retries > 0:
+            print("Failed to retrieve header information, retry %s of 5" % connection_retries)
+
+        try:
+            headers, _ = http_handle.request(url, 'HEAD', '', headers={})
+            connected = True
+
+        except httplib2.ServerNotFoundError as e:
+            connection_retries += 1
+            if connection_retries > 5:
+                raise HttpError("The IP address of %s could not be determined. Additional info: %s" % (url, e))
+
+        except socket.timeout:
+            connection_retries += 1
+            if connection_retries > 5:
+                raise HttpError("The connection with %s timed out while retrieving header information" % url)
+
+    try:
+        content_length = int(headers['content-length'])
+
+    except KeyError:
+        raise HttpError("Content length not set")
+
+    block_start = 0
+    block_end = block_size
+
+    if block_end > content_length:
+        block_end = content_length - 1
+
+    block_id = 0
+    while content_length > block_start and block_end != block_start:
+
+        work_queue.put([block_id, block_start, block_end])
+
+        block_start = block_end + 1
+        block_end += block_size
+
+        if block_end >= content_length:
+            block_end = content_length - 1
+
+        block_id += 1
+
+    # Insert poison pills in queue
+    for _ in range(threads):
+        work_queue.put(None)
+
+    # Write all result blocks to the result file
+    written_block_id = 0
+    while written_block_id < block_id:
+
+        written = False
+        while not written:
+
+            try:
+                file_handle.write(result_blocks[written_block_id])
+                written = True
+                result_blocks.pop(written_block_id)
+                written_block_id += 1
+
+            except KeyError:
+                time.sleep(0.1)
+
+    return content_length
+
+
+def _get_block(http_handle, url, block_start, block_end):
+    headers = {
+        'Range': 'bytes=%s-%s' % (block_start, block_end)
+    }
+
+    content = None
+    completed = False
+    try_count = 0
+
+    while not completed and try_count < 7:
+        try:
+            resp, content = http_handle.request(url, 'GET', '', headers)
+            completed = True
+
+        except Exception:
+            print("Failed a block, retrying")
+            try_count += 1
+
+    if not completed:
+        raise HttpError("Downloading of block failed after 7 retries")
+
+    return content
+
+
+def _thread_download(work_queue, result_blocks, url, timeout, disable_ssl_validation):
+    """
+    Download a block and save result in provided dictionary. Called by the thread pool.
+
+    :param work_queue: queue object to obtain work items from
+    :param result_blocks: dictionary to store block in
+    :param url: url to download from
+    :param timeout: http timeout
+    :param disable_ssl_validation: whether to disable SSL validation in httplib2
+    """
+
+    # Initialise HTTP handle
+    http_handle = httplib2.Http(timeout=timeout, disable_ssl_certificate_validation=disable_ssl_validation)
+
+    while True:
+        work = work_queue.get()
+
+        # Stop if receiving poison pill
+        if work is None:
+            return
+
+        result_blocks[work[0]] = _get_block(http_handle, url, work[1], work[2])
