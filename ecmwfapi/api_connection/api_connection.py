@@ -13,7 +13,7 @@ import json
 import sys
 import time
 
-from ecmwfapi import http
+from ecmwfapi import custom_http
 
 
 class ApiConnection(object):
@@ -101,8 +101,8 @@ class ApiConnection(object):
             time_start = time.time()
 
             # Transfer the dataset using the robust file transfer
-            transfer_size = http.robust_get_file(result['href'], file,
-                                                 disable_ssl_validation=self.disable_ssl_validation)
+            transfer_size = custom_http.robust_get_file(result['href'], file,
+                                                        disable_ssl_validation=self.disable_ssl_validation)
 
             time_end = time.time()
 
@@ -140,7 +140,7 @@ class ApiConnection(object):
         url = "%s/?offset=%d&limit=500" % (url, self.message_offset)
 
         if request_type == 'GET':
-            [headers, content] = http.get_request(url, headers, disable_ssl_validation=self.disable_ssl_validation)
+            [headers, content] = custom_http.get_request(url, headers, disable_ssl_validation=self.disable_ssl_validation)
 
         elif request_type == 'POST':
 
@@ -149,11 +149,11 @@ class ApiConnection(object):
                 raise ApiConnectionError("No payload given with POST request to %s" % url)
 
             data = json.dumps(payload).encode('utf-8')
-            [headers, content] = http.post_request(url, data, headers,
-                                                   disable_ssl_validation=self.disable_ssl_validation)
+            [headers, content] = custom_http.post_request(url, data, headers,
+                                                          disable_ssl_validation=self.disable_ssl_validation)
 
         elif request_type == 'DELETE':
-            [headers, content] = http.delete_request(url, headers, disable_ssl_validation=self.disable_ssl_validation)
+            [headers, content] = custom_http.delete_request(url, headers, disable_ssl_validation=self.disable_ssl_validation)
 
         else:
             raise ApiConnectionError("Unknown API request type %s" % request_type)
