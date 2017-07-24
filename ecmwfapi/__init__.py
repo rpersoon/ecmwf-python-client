@@ -9,6 +9,7 @@
 # does it submit to any jurisdiction.
 
 from .ECMWFDataServer import ECMWFDataServer
+from .ECMWFService import ECMWFService
 from .ECMWFExtendedDataServer import ECMWFExtendedDataServer
 from .exceptions import DataServerError
 

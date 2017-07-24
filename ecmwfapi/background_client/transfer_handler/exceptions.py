@@ -1,0 +1,2 @@
+class ConnectionHandlerError(Exception):
+    pass
