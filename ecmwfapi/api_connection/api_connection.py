@@ -122,7 +122,7 @@ class ApiConnection(object):
 
     def _api_request(self, url, request_type='GET', payload=None):
         """
-        Make a request at the ECMWF API
+        Make a request at the ECMWF API. Retries in case of errors.
 
         :param url: URL to call
         :param request_type: request type, one of [GET, POST, DELETE]
@@ -130,7 +130,12 @@ class ApiConnection(object):
         :return: tuple with response headers and content
         """
 
-        headers = {
+        request_tries = 0
+        request_succeeded = False
+        headers = None
+        content = None
+
+        request_headers = {
             'Accept': "application/json",
             'From': self.api_email,
             'X-ECMWF-KEY': self.api_key
@@ -139,24 +144,40 @@ class ApiConnection(object):
         # Construct API request URL
         url = "%s/?offset=%d&limit=500" % (url, self.message_offset)
 
-        if request_type == 'GET':
-            [headers, content] = custom_http.get_request(url, headers, disable_ssl_validation=self.disable_ssl_validation)
+        while request_tries < 7 and not request_succeeded:
+            try:
+                if request_type == 'GET':
+                    [headers, content] = custom_http.get_request(url, request_headers, timeout=30,
+                                                                 disable_ssl_validation=self.disable_ssl_validation)
 
-        elif request_type == 'POST':
+                elif request_type == 'POST':
 
-            # Verify that a payload was given
-            if not payload:
-                raise ApiConnectionError("No payload given with POST request to %s" % url)
+                    # Verify that a payload was given
+                    if not payload:
+                        raise ApiConnectionError("No payload given with POST request to %s" % url)
 
-            data = json.dumps(payload).encode('utf-8')
-            [headers, content] = custom_http.post_request(url, data, headers,
-                                                          disable_ssl_validation=self.disable_ssl_validation)
+                    data = json.dumps(payload).encode('utf-8')
+                    [headers, content] = custom_http.post_request(url, data, request_headers, timeout=30,
+                                                                  disable_ssl_validation=self.disable_ssl_validation)
 
-        elif request_type == 'DELETE':
-            [headers, content] = custom_http.delete_request(url, headers, disable_ssl_validation=self.disable_ssl_validation)
+                elif request_type == 'DELETE':
+                    [headers, content] = custom_http.delete_request(url, request_headers, timeout=30,
+                                                                    disable_ssl_validation=self.disable_ssl_validation)
 
-        else:
-            raise ApiConnectionError("Unknown API request type %s" % request_type)
+                else:
+                    raise ApiConnectionError("Unknown API request type %s" % request_type)
+
+                request_succeeded = True
+
+            except custom_http.CustomHttpError as e:
+                self.log("Api request failed: %s" % e, 'warning', self.request_id)
+                request_tries += 1
+
+                # Wait at least a second before the next try
+                time.sleep(1)
+
+        if not request_succeeded:
+            raise ApiConnectionError("Failed to complete API request")
 
         # Decode the response
         try:

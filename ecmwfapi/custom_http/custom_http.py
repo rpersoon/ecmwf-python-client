@@ -1,4 +1,4 @@
-from .exceptions import *
+from .exceptions import CustomHttpError
 
 import concurrent.futures
 import httplib2
@@ -23,10 +23,13 @@ def get_request(url, headers=None, timeout=30, disable_ssl_validation=False):
         h.follow_redirects = False
         resp, content = h.request(url, 'GET', '', headers=headers)
 
-    except (httplib2.ServerNotFoundError, ConnectionRefusedError) as e:
-        raise HttpError("Could not retrieve URL %s. Additional info: %s" % (url, e))
+    except (httplib2.ServerNotFoundError, ConnectionResetError, ConnectionAbortedError, ConnectionRefusedError,
+            ConnectionError) as e:
+        raise CustomHttpError("Could not retrieve URL %s. Additional info: %s" % (url, e))
     except socket.timeout:
-        raise HttpError("Request timed out after specified timeout period of %s seconds" % timeout)
+        raise CustomHttpError("Request timed out after specified timeout period of %s seconds" % timeout)
+    except Exception as e:
+        raise CustomHttpError("Other unknown exception: %s" % e)
 
     return [resp, content]
 
@@ -54,10 +57,13 @@ def post_request(url, data, headers=None, timeout=30, disable_ssl_validation=Fal
         h.follow_redirects = False
         resp, content = h.request(url, 'POST', data, headers=headers)
 
-    except (httplib2.ServerNotFoundError, ConnectionRefusedError) as e:
-        raise HttpError("Could not retrieve URL %s. Additional info: %s" % (url, e))
+    except (httplib2.ServerNotFoundError, ConnectionResetError, ConnectionAbortedError, ConnectionRefusedError,
+            ConnectionError) as e:
+        raise CustomHttpError("Could not retrieve URL %s. Additional info: %s" % (url, e))
     except socket.timeout:
-        raise HttpError("Request timed out after specified timeout period of %s seconds" % timeout)
+        raise CustomHttpError("Request timed out after specified timeout period of %s seconds" % timeout)
+    except Exception as e:
+        raise CustomHttpError("Other unknown exception: %s" % e)
 
     return [resp, content]
 
@@ -78,10 +84,13 @@ def delete_request(url, headers=None, timeout=30, disable_ssl_validation=False):
         h.follow_redirects = False
         resp, content = h.request(url, 'DELETE', '', headers=headers)
 
-    except (httplib2.ServerNotFoundError, ConnectionRefusedError) as e:
-        raise HttpError("Could not retrieve URL %s. Additional info: %s" % (url, e))
+    except (httplib2.ServerNotFoundError, ConnectionResetError, ConnectionAbortedError, ConnectionRefusedError,
+            ConnectionError) as e:
+        raise CustomHttpError("Could not retrieve URL %s. Additional info: %s" % (url, e))
     except socket.timeout:
-        raise HttpError("Request timed out after specified timeout period of %s seconds" % timeout)
+        raise CustomHttpError("Request timed out after specified timeout period of %s seconds" % timeout)
+    except Exception as e:
+        raise CustomHttpError("Other unknown exception: %s" % e)
 
     return [resp, content]
 
@@ -100,19 +109,19 @@ def robust_get_file(url, file_handle, block_size=1048576, timeout=20, disable_ss
 
     # Verify block size parameter
     if not isinstance(block_size, int):
-        raise HttpError("The block size should be an integer")
+        raise CustomHttpError("The block size should be an integer")
     elif block_size < 512:
-        raise HttpError("The block size should be at least 512 bytes")
+        raise CustomHttpError("The block size should be at least 512 bytes")
     elif block_size > 268435456:
-        raise HttpError("The block size can not be more than 256 megabytes")
+        raise CustomHttpError("The block size can not be more than 256 megabytes")
 
     # Verify timeout parameter
     if not isinstance(timeout, int):
-        raise HttpError("The timeout should be an integer")
+        raise CustomHttpError("The timeout should be an integer")
     elif timeout < 1:
-        raise HttpError("The timeout should be at least 1 second")
+        raise CustomHttpError("The timeout should be at least 1 second")
     elif timeout > 86400:
-        raise HttpError("The timeout can not be more than 86400 seconds")
+        raise CustomHttpError("The timeout can not be more than 86400 seconds")
 
     # Define HTTP handler
     http_handle = httplib2.Http(timeout=timeout, disable_ssl_certificate_validation=disable_ssl_validation)
@@ -133,18 +142,18 @@ def robust_get_file(url, file_handle, block_size=1048576, timeout=20, disable_ss
         except httplib2.ServerNotFoundError as e:
             connection_retries += 1
             if connection_retries > 5:
-                raise HttpError("The IP address of %s could not be determined. Additional info: %s" % (url, e))
+                raise CustomHttpError("The IP address of %s could not be determined. Additional info: %s" % (url, e))
 
         except socket.timeout:
             connection_retries += 1
             if connection_retries > 5:
-                raise HttpError("The connection with %s timed out while retrieving header information" % url)
+                raise CustomHttpError("The connection with %s timed out while retrieving header information" % url)
 
     try:
         content_length = int(headers['content-length'])
 
     except KeyError:
-        raise HttpError("Content length not set")
+        raise CustomHttpError("Content length not set")
 
     block_start = 0
     block_end = block_size
@@ -179,19 +188,19 @@ def robust_get_file_parallel(url, file_handle, block_size=1048576, timeout=20, d
 
     # Verify block size parameter
     if not isinstance(block_size, int):
-        raise HttpError("The block size should be an integer")
+        raise CustomHttpError("The block size should be an integer")
     elif block_size < 512:
-        raise HttpError("The block size should be at least 512 bytes")
+        raise CustomHttpError("The block size should be at least 512 bytes")
     elif block_size > 268435456:
-        raise HttpError("The block size can not be more than 256 megabytes")
+        raise CustomHttpError("The block size can not be more than 256 megabytes")
 
     # Verify timeout parameter
     if not isinstance(timeout, int):
-        raise HttpError("The timeout should be an integer")
+        raise CustomHttpError("The timeout should be an integer")
     elif timeout < 1:
-        raise HttpError("The timeout should be at least 1 second")
+        raise CustomHttpError("The timeout should be at least 1 second")
     elif timeout > 86400:
-        raise HttpError("The timeout can not be more than 86400 seconds")
+        raise CustomHttpError("The timeout can not be more than 86400 seconds")
 
     # Define block result storage
     result_blocks = {}
@@ -223,18 +232,18 @@ def robust_get_file_parallel(url, file_handle, block_size=1048576, timeout=20, d
         except httplib2.ServerNotFoundError as e:
             connection_retries += 1
             if connection_retries > 5:
-                raise HttpError("The IP address of %s could not be determined. Additional info: %s" % (url, e))
+                raise CustomHttpError("The IP address of %s could not be determined. Additional info: %s" % (url, e))
 
         except socket.timeout:
             connection_retries += 1
             if connection_retries > 5:
-                raise HttpError("The connection with %s timed out while retrieving header information" % url)
+                raise CustomHttpError("The connection with %s timed out while retrieving header information" % url)
 
     try:
         content_length = int(headers['content-length'])
 
     except KeyError:
-        raise HttpError("Content length not set")
+        raise CustomHttpError("Content length not set")
 
     block_start = 0
     block_end = block_size
@@ -292,12 +301,12 @@ def _get_block(http_handle, url, block_start, block_end):
             resp, content = http_handle.request(url, 'GET', '', headers)
             completed = True
 
-        except Exception:
-            print("Failed a block, retrying")
+        except Exception as e:
+            print("Failed a block, retrying (%s)" % e)
             try_count += 1
 
     if not completed:
-        raise HttpError("Downloading of block failed after 7 retries")
+        raise CustomHttpError("Downloading of block failed after 7 retries")
 
     return content
 

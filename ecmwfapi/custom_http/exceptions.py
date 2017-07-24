@@ -1,2 +1,2 @@
-class HttpError(Exception):
+class CustomHttpError(Exception):
     pass
