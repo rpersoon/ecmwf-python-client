@@ -1,2 +1,2 @@
-class ConnectionHandlerError(Exception):
+class TransferHandlerError(Exception):
     pass
