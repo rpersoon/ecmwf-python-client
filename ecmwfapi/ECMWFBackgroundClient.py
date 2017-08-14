@@ -13,9 +13,9 @@
 import queue
 import signal
 
-from background_client.connection_handler import ConnectionHandler, ConnectionHandlerError
-from background_client.socket_communication import SocketServer, SocketServerError
-from background_client.transfer_handler import TransferHandler, TransferHandlerError
+from background_client_cli.connection_handler import ConnectionHandler, ConnectionHandlerError
+from background_client_cli.socket_communication import SocketServer, SocketServerError
+from background_client_cli.transfer_handler import TransferHandler, TransferHandlerError
 from log import *
 
 server_instance = None
