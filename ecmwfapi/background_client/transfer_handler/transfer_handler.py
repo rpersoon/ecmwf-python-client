@@ -66,6 +66,9 @@ class TransferHandler(threading.Thread):
             if task is None:
                 break
 
+            if self.active_task_storage[task]['task_status'] == 'cancelled':
+                self.log.info("Skipping cancelled transfer")
+
             self.active_task_storage[task]['task_status'] = 'active'
 
             # Process the transfer

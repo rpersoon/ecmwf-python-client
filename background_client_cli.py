@@ -45,7 +45,14 @@ def main():
                 add_transfer(sys.argv[2])
 
             else:
-                print("No transfer data specified. Use 'headless_client.py help' for usage instructions.")
+                print("No transfer data specified. Use 'background_client_cli.py help' for usage instructions.")
+
+        elif sys.argv[1] == 'cancel_transfer':
+            if len(sys.argv) > 2:
+                cancel_transfer(sys.argv[2])
+
+            else:
+                print("No transfer ID specified. Use 'background_client_cli.py help' for usage instructions.")
 
         elif sys.argv[1] == 'help':
             print_help()
@@ -144,6 +151,22 @@ def add_transfer(transfer_data):
 
     else:
         print("An error occurred while adding the transfer: %s" % command_response['error_message'])
+
+
+def cancel_transfer(task_id):
+    """
+    Cancel a transfer
+
+    :param task_id: task_id of the transfer to be cancelled. Only queued transfers can be cancelled
+    """
+
+    command_response = send_command('cancel_transfer', {'task_id': task_id})
+
+    if command_response['status'] == 'ok':
+        print("The transfer was successfully cancelled")
+
+    else:
+        print("An error occurred while cancelling the transfer: %s" % command_response['error_message'])
 
 
 def start_background_client():

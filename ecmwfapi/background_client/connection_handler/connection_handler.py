@@ -142,6 +142,36 @@ class ConnectionHandler(threading.Thread):
                             'error_message': "Failed to add the transfer"
                         }
 
+                elif command_type == 'cancel_transfer':
+
+                    try:
+                        task_id = command_data['task_id']
+
+                    except KeyError:
+                        self.log.error("Failed to cancel transfer: %s" % e)
+
+                        response = {
+                            'status': 'error',
+                            'error_message': "Failed to cancel the transfer. It might be active or completed already."
+                        }
+
+                    else:
+                        try:
+                            self.cancel_transfer(task_id)
+
+                            response = {
+                                'status': 'ok'
+                            }
+
+                        except ConnectionHandlerError as e:
+                            self.log.error("Failed to cancel transfer: %s" % e)
+
+                            response = {
+                                'status': 'error',
+                                'error_message': "Failed to cancel the transfer. It might be active or completed "
+                                                 "already."
+                            }
+
                 elif command_type == 'heartbeat':
                     response = {
                         'status': 'ok',
@@ -215,3 +245,22 @@ class ConnectionHandler(threading.Thread):
         self.task_queue.put(task_id)
 
         return task_id
+
+    def cancel_transfer(self, task_id):
+        """
+        Cancel a transfer. Only possible if the transfer is queued and not yet active.
+
+        :param task_id: task ID of transfer to be cancelled
+        :return bool
+        """
+
+        try:
+            if self.active_task_storage[task_id]['task_status'] == 'queued':
+                self.active_task_storage[task_id]['task_status'] = 'cancelled'
+                return True
+
+            else:
+                raise ConnectionHandlerError("No queued transfer found with given transfer ID")
+
+        except (KeyError, IndexError):
+            raise ConnectionHandlerError("No transfer found with given transfer ID")
