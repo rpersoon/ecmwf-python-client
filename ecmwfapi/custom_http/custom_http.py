@@ -14,9 +14,17 @@ from .exceptions import CustomHttpError
 
 import concurrent.futures
 import httplib2
-import queue
 import socket
+import sys
 import time
+
+
+# Python 2 backwards compatibility: queue module called Queue in python 2
+if sys.version_info > (3, 0):
+    import queue
+
+else:
+    import Queue as queue
 
 
 def get_request(url, headers=None, timeout=30, disable_ssl_validation=False):

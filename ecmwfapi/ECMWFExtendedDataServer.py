@@ -11,11 +11,17 @@
 
 
 from .exceptions import *
+from .ECMWFDataServer import *
 
-import queue
+import sys
 import threading
 
-from .ECMWFDataServer import *
+# Python 2 backwards compatibility: queue module called Queue in python 2
+if sys.version_info > (3, 0):
+    import queue
+
+else:
+    import Queue as queue
 
 
 class ECMWFExtendedDataServer(ECMWFDataServer):
