@@ -22,7 +22,7 @@ from ecmwfapi.background_client.socket_communication import SocketConnection, So
 def main():
 
     if len(sys.argv) <= 1:
-        print("No command specified. Use 'headless_client.py help' for usage instructions.")
+        print("No command specified. Use 'background_client_cli.py help' for usage instructions.")
 
     else:
         if sys.argv[1] == 'status':
@@ -58,7 +58,7 @@ def main():
             print_help()
 
         else:
-            print("Unknown command. Use 'headless_client.py help' for usage instructions.")
+            print("Unknown command. Use 'background_client_cli.py help' for usage instructions.")
 
 
 def list_transfers(completed=False):
@@ -117,7 +117,7 @@ def add_transfer(transfer_data):
             parts = item.split(':')
 
             if len(parts) != 2:
-                print("Incorrect transfer data given, please call 'headless_client.py help' for the syntax")
+                print("Incorrect transfer data given, please call 'background_client_cli.py help' for the syntax")
                 return
 
             transfer_parameters[parts[0]] = parts[1]
@@ -135,7 +135,7 @@ def add_transfer(transfer_data):
                 parts = item.split(':')
 
                 if len(parts) != 2:
-                    print("Incorrect transfer data in file, please call 'headless_client.py help' for the syntax")
+                    print("Incorrect transfer data in file, please call 'background_client_cli.py help' for the syntax")
                     return
 
                 transfer_parameters[parts[0]] = parts[1]
@@ -252,16 +252,17 @@ def print_help():
     """
 
     print("Available commands:")
-    print("./background_client.py status                    - Check whether the background client is running")
-    print("./background_client.py start                     - Start the background client")
-    print("./background_client.py stop                      - Stop the background client")
-    print("./background_client.py list_active_transfers     - List the currently active transfers")
-    print("./background_client.py list_completed_transfers  - List the completed transfers since the background client "
-          "was started")
-    print("./background_client.py add_transfer <parameters> - Start a new transfer")
+    print("./background_client_cli.py.py status                    - Check whether the background client is running")
+    print("./background_client_cli.py.py start                     - Start the background client")
+    print("./background_client_cli.py.py stop                      - Stop the background client")
+    print("./background_client_cli.py.py list_active_transfers     - List the currently active transfers")
+    print("./background_client_cli.py.py list_completed_transfers  - List the completed transfers since the background "
+          "client was started")
+    print("./background_client_cli.py.py add_transfer <parameters> - Start a new transfer")
+    print("./background_client_cli.py.py cancel_transfer <task id> - Cancel a transfer")
     print()
-    print("New transfer parameter format")
-    print("-----------------------------")
+    print("Parameter format for a new transfer")
+    print("-----------------------------------")
     print("The parameters of new transfers can either be specified on the command line directly, or entered in a file. "
           "When using the command line, different parameters are separated by comma's and each of the key-value pairs "
           "are separated by colons. When using a file, different parameters are separated by new lines and each of the "
@@ -274,7 +275,7 @@ def print_help():
     print()
     print('    or')
     print()
-    print("./background_client.py add_transfer transfer_data.txt")
+    print("./background_client_cli.py.py add_transfer transfer_data.txt")
     print()
     print("Where the file 'transfer_data.txt' would contain:")
     print()
