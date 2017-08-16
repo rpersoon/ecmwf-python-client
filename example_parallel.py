@@ -11,12 +11,12 @@
 # (C) Copyright 2017 Ricardo Persoon.
 
 
-from ecmwfapi import ECMWFExtendedDataServer
+from ecmwfapi import ECMWFDataServer
 
 # To run this example, you need an API key 
 # available from https://api.ecmwf.int/v1/key/
 
-server = ECMWFExtendedDataServer()
+server = ECMWFDataServer()
 
 server.retrieve_parallel(
     [
@@ -30,62 +30,37 @@ server.retrieve_parallel(
             "param": "165",
             "step": "0/to/1104/by/24",
             "stream": "enfo",
-            "target": "test",
+            "target": "test_1",
             "time": "00",
             "type": "cf",
         },
         {
             "class": "s2",
             "dataset": "s2s",
-            "date": "2015-01-02",
+            "date": "2015-01-01",
             "expver": "prod",
             "levtype": "sfc",
             "origin": "ecmf",
             "param": "165",
             "step": "0/to/1104/by/24",
             "stream": "enfo",
-            "target": "test",
-            "time": "00",
-            "type": "cf",
-        },{
-            "class": "s2",
-            "dataset": "s2s",
-            "date": "2015-01-03",
-            "expver": "prod",
-            "levtype": "sfc",
-            "origin": "ecmf",
-            "param": "165",
-            "step": "0/to/1104/by/24",
-            "stream": "enfo",
-            "target": "test",
-            "time": "00",
-            "type": "cf",
-        },{
-            "class": "s2",
-            "dataset": "s2s",
-            "date": "2015-01-04",
-            "expver": "prod",
-            "levtype": "sfc",
-            "origin": "ecmf",
-            "param": "165",
-            "step": "0/to/1104/by/24",
-            "stream": "enfo",
-            "target": "test",
-            "time": "00",
-            "type": "cf",
-        },{
-            "class": "s2",
-            "dataset": "s2s",
-            "date": "2015-01-05",
-            "expver": "prod",
-            "levtype": "sfc",
-            "origin": "ecmf",
-            "param": "165",
-            "step": "0/to/1104/by/24",
-            "stream": "enfo",
-            "target": "test",
+            "target": "test_2",
             "time": "00",
             "type": "cf",
         },
+        {
+            "class": "s2",
+            "dataset": "s2s",
+            "date": "2015-01-01",
+            "expver": "prod",
+            "levtype": "sfc",
+            "origin": "ecmf",
+            "param": "165",
+            "step": "0/to/1104/by/24",
+            "stream": "enfo",
+            "target": "test_2",
+            "time": "00",
+            "type": "cf",
+        }
     ]
 )
