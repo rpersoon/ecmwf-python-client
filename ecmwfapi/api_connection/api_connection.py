@@ -187,7 +187,7 @@ class ApiConnection(object):
             content_raw = content.decode('utf-8')
             content = json.loads(content_raw)
 
-        except (LookupError, ValueError, json.decoder.JSONDecodeError) as e:
+        except (LookupError, ValueError, Exception) as e:
             raise ApiConnectionError("Failed to decode result: %s" % str(e))
 
         # Check for any errors in the response
