@@ -13,7 +13,6 @@
 
 from .ECMWFDataServer import ECMWFDataServer
 from .ECMWFService import ECMWFService
-from .ECMWFExtendedDataServer import ECMWFExtendedDataServer
 from .log import Log
 from .exceptions import DataServerError
 
