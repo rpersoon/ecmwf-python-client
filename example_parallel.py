@@ -47,20 +47,6 @@ server.retrieve_parallel(
             "target": "test_2",
             "time": "00",
             "type": "cf",
-        },
-        {
-            "class": "s2",
-            "dataset": "s2s",
-            "date": "2015-01-01",
-            "expver": "prod",
-            "levtype": "sfc",
-            "origin": "ecmf",
-            "param": "165",
-            "step": "0/to/1104/by/24",
-            "stream": "enfo",
-            "target": "test_2",
-            "time": "00",
-            "type": "cf",
         }
     ]
 )
