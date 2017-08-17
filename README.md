@@ -1,7 +1,7 @@
 ECMWF Python Client
 ===================
 
-This repository is a fork of the ECMWF Python Client, used to access ECMWF datasets. It is part of my MSc dissertation project at the University of Edinburgh.
+This repository is a copy of the ECMWF Python Client 1.4.1 obtained from the [ECMWF webpages](https://software.ecmwf.int/wiki/display/WEBAPI/Accessing+ECMWF+data+servers+in+batch), that is used to access ECMWF datasets. It is part of my MSc dissertation project at the University of Edinburgh.
 
 
 Usage
