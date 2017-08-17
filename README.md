@@ -3,13 +3,15 @@ ECMWF Python Client
 
 This repository is a fork of the ECMWF Python Client, used to access ECMWF datasets. It is part of my MSc dissertation project at the University of Edinburgh.
 
-https://software.ecmwf.int/wiki/display/WEBAPI/Access+ECMWF+Public+Datasets
 
-> (C) Copyright 2012-2013 ECMWF.
-> (C) Copyright 2017 Ricardo Persoon.
+Usage
+-----
+This client requires the `httplib2` to be installed. You can install it with `pip`: `pip3 install httplib2`, or `pip3 install --user httplib2` to install for the local user only.
 
-> This software is licensed under the terms of the Apache Licence Version 2.0
-which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
-In applying this licence, ECMWF does not waive the privileges and immunities
-granted to it by virtue of its status as an intergovernmental organisation nor
-does it submit to any jurisdiction.
+The file `example.py` contains an example of a normal dataset request, without parallelisation. It can be called using `python3 example.py`. A parallel request, that transfers multiple datasets concurrently, can be started with `python3 example_parallel.py`.
+
+Standard requests are configured for both examples. More example requests can be found on the ECMWF webpages: https://software.ecmwf.int/wiki/display/WEBAPI/Accessing+ECMWF+data+servers+in+batch.
+
+This client contains a background-client that runs in the background of a system. It can be started with `python3 background_client_cli.py start`. Further usage instructions can be obtained through `python3 background_client_cli.py help`. 
+
+This project also provides a web interface that can be used to operate the background client: https://github.com/rpersoon/ecmwf-python-client-webinterface. 
