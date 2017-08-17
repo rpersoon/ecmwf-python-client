@@ -3,6 +3,7 @@ ECMWF Python Client
 
 This repository is a copy of the ECMWF Python Client 1.4.1 obtained from the [ECMWF webpages](https://software.ecmwf.int/wiki/display/WEBAPI/Accessing+ECMWF+data+servers+in+batch), that is used to access ECMWF datasets. It is part of my MSc dissertation project at the University of Edinburgh.
 
+The project improved the robustness of transfers and added several features, including parallel downloading and a version of the client that operates in the background of a system. 
 
 Usage
 -----
